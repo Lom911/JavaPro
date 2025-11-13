@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: logger
+spec:
+  containers:
+    - name: busybox
+      image: busybox
+      command:
+        - sh
+        - -c
+        - |
+          while true; do
+            echo "$(date) - Log entry" >> /data/log.txt
+            sleep 5
+          done
+      volumeMounts:
+        - name: logs-storage
+          mountPath: /data
+  volumes:
+    - name: logs-storage
+      persistentVolumeClaim:
+        claimName: logs-pvc

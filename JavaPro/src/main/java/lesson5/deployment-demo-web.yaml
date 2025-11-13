@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-web
+  template:
+    metadata:
+      labels:
+        app: demo-web
+    spec:
+      containers:
+      # Контейнер nginx для раздачи файлов
+      - name: nginx
+        image: nginx:1.27
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: web-content
+          mountPath: /usr/share/nginx/html
+
+      # Контейнер writer для записи index.html
+      - name: writer
+        image: busybox
+        envFrom:
+        - configMapRef:
+            name: app-config
+        command:
+        - sh
+        - -c
+        - |
+          while true; do
+            echo "<html><body>" > /data/index.html
+            echo "<h1>Demo Web Page</h1>" >> /data/index.html
+            echo "<p>Date: $(date)</p>" >> /data/index.html
+            echo "<p>Color: $APP_COLOR</p>" >> /data/index.html
+            echo "<p>Mode: $APP_MODE</p>" >> /data/index.html
+            echo "</body></html>" >> /data/index.html
+            sleep 10
+          done
+        volumeMounts:
+        - name: web-content
+          mountPath: /data
+
+      volumes:
+      - name: web-content
+        persistentVolumeClaim:
+          claimName: web-pvc
