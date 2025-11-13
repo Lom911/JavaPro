@@ -1,0 +1,50 @@
+# 1. Головной (headless) сервис для обеспечения стабильного сетевого имени
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-headless-svc # Это имя должно совпадать с serviceName в StatefulSet
+  labels:
+    app: hello-sts
+spec:
+  ports:
+    - port: 80
+      name: web # Порт здесь больше для формальности
+  clusterIP: None # Ключевой параметр, делающий сервис "headless"
+  selector:
+    app: hello-sts # Должен совпадать с селектором StatefulSet
+
+---
+
+# 2. Сам StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hello-statefulset
+spec:
+  serviceName: "hello-headless-svc" # Связь с headless-сервисом
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello-sts # Селектор для поиска своих подов
+  template:
+    metadata:
+      labels:
+        app: hello-sts # Метка, которую будет искать селектор
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: hello-container
+          image: busybox:latest
+          # Команда, которая выводит имя пода и засыпает
+          command:
+            - sh
+            - -c
+            - |
+              echo "Hello from pod $POD_NAME"
+              sleep 300
+          env:
+            # Используем Downward API, чтобы передать имя пода в переменную окружения
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name

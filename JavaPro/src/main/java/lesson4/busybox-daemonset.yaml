@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: busybox-daemonset
+  labels:
+    app: busybox-daemon
+spec:
+  selector:
+    matchLabels:
+      app: busybox-daemon
+  template:
+    metadata:
+      labels:
+        app: busybox-daemon
+    spec:
+      containers:
+        - name: busybox
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              while true; do
+                echo "Hello from $(hostname)"
+                sleep 60
+              done
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+            requests:
+              memory: "64Mi"
+              cpu: "50m"

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+  name: nginx-deployment # Имя самого Deployment'а.
+
+spec:
+  replicas: 3 # Количество желаемых копий (реплик) Pod'а.
+
+  selector:
+    matchLabels:
+      app: my-nginx-app # Селектор определяет, какими Pod'ами этот Deployment управляет.
+
+  template: # Это, по сути, "вложенный" манифест Pod'а.
+    metadata:
+      labels:
+        app: my-nginx-app
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx:1.25
+          ports:
+            - containerPort: 80

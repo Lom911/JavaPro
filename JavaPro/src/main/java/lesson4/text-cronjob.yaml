@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: arbitrary-text-cronjob
+spec:
+  # Запускать каждые 2 минуты
+  schedule: "*/2 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: text-printer
+              image: busybox:latest
+              command:
+                - /bin/sh
+                - -c
+                - echo "This is a scheduled task running every two minutes."
+          restartPolicy: OnFailure

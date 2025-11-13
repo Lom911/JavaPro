@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello-job
+spec:
+  # Количество успешных завершений, которых нужно достичь
+  completions: 1
+
+  # Количество параллельно работающих подов
+  parallelism: 1
+
+  # Сколько раз можно повторить в случае неудачи (необязательный параметр)
+  backoffLimit: 3
+
+  template:
+    metadata:
+      labels:
+        app: hello-job
+    spec:
+      # Важно! restartPolicy для Job может быть только Never или OnFailure
+      restartPolicy: Never
+
+      containers:
+        - name: hello-container
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - echo "Hello from Kubernetes"
+
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
