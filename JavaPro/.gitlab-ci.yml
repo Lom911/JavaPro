@@ -1,0 +1,109 @@
+variables:
+  LOG_FILE_NAME: "log.txt"
+
+stages:
+  - stage_build
+  - stage_test
+  - stage_deploy_dev
+  - stage_deploy_prd
+
+# ============================================
+# СТАДИЯ 1: BUILD
+# ============================================
+build_job:
+  stage: stage_build
+  script:
+    - echo "---Build Started---" > "${LOG_FILE_NAME}"
+    - echo "Building the application..." | tee -a "${LOG_FILE_NAME}"
+    - echo "---Build Completed---" | tee -a "${LOG_FILE_NAME}"
+  artifacts:
+    paths:
+      - "${LOG_FILE_NAME}"
+
+# ============================================
+# СТАДИЯ 2: TEST (3 джобы последовательно)
+# ============================================
+
+# Первый тест (запускается сразу после build)
+test_job1:
+  stage: stage_test
+  script:
+    - echo "---Test 1 Started---" | tee -a "${LOG_FILE_NAME}"
+    - test -f "${LOG_FILE_NAME}"
+    - echo "Running test 1" | tee -a "${LOG_FILE_NAME}"
+    - echo "---Test 1 Completed---" | tee -a "${LOG_FILE_NAME}"
+    - echo ""
+    - echo "========= TEST 1 LOG ========="
+  artifacts:
+    paths:
+      - "${LOG_FILE_NAME}"
+
+test_job2:
+  stage: stage_test
+  needs:
+    - job: test_job1
+      artifacts: true
+  script:
+    - echo "---Test 2 Started---" | tee -a "${LOG_FILE_NAME}"
+    - test -f "${LOG_FILE_NAME}"
+    - echo "Running test 2..." | tee -a "${LOG_FILE_NAME}"
+    - echo "---Test 2 Completed---" | tee -a "${LOG_FILE_NAME}"
+  artifacts:
+    paths:
+      - "${LOG_FILE_NAME}"
+
+test_job3:
+  stage: stage_test
+  needs:
+    - job: test_job2
+      artifacts: true
+  script:
+    - echo "---Test 3 Started---" | tee -a "${LOG_FILE_NAME}"
+    - test -f "${LOG_FILE_NAME}"
+    - echo "Running test 3..." | tee -a "${LOG_FILE_NAME}"
+    - echo "---Test 3 Completed---" | tee -a "${LOG_FILE_NAME}"
+  artifacts:
+    paths:
+      - "${LOG_FILE_NAME}"
+
+# ============================================
+# СТАДИЯ 3: DEPLOY TO DEV (автоматический)
+# ============================================
+deploy_to_dev_job:
+  stage: stage_deploy_dev
+  needs:
+    - job: test_job3
+      artifacts: true
+  script:
+    - echo "---Deploy to DEV Started---"   | tee -a "${LOG_FILE_NAME}"
+    - echo "Deploying to DEV..."           | tee -a "${LOG_FILE_NAME}"
+    - sleep 5 # имитация деплоя
+    - echo "---Deploy to DEV Completed---" | tee -a "${LOG_FILE_NAME}"
+    - echo "========= MERGED LOG (after DEV) ========="
+    - wc -c "${LOG_FILE_NAME}" | awk '{print "size(bytes):",$1}'
+    - cat -n "${LOG_FILE_NAME}"
+  artifacts:
+    paths:
+      - "${LOG_FILE_NAME}"
+
+# ============================================
+# СТАДИЯ 4: DEPLOY TO PRODUCTION (ручной)
+# ============================================
+deploy_to_prd_job:
+  stage: stage_deploy_prd
+  needs:
+    - job: deploy_to_dev_job
+      artifacts: true
+  script:
+    - echo "---Deploy to PROD Started---"   | tee -a "${LOG_FILE_NAME}"
+    - echo "Deploying to PROD..."           | tee -a "${LOG_FILE_NAME}"
+    - sleep 10 # имитация деплоя
+    - echo "---Deploy to PROD Completed---" | tee -a "${LOG_FILE_NAME}"
+    - echo "========= FINAL MERGED LOG (after PROD) ========="
+    - wc -c "${LOG_FILE_NAME}" | awk '{print "size(bytes):",$1}'
+    - cat -n "${LOG_FILE_NAME}"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"' # <-- ПРАВИЛО: только для ветки main
+      when: manual                    # <-- ПРАВИЛО: запускать вручную
+      allow_failure: false            # <-- ПРАВИЛО: если упадет, весь пайплайн считается упавшим
+  resource_group: production          # <-- не дает запустить 2 таких джоба одновременно из разных пайплайнов
